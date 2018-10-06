@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 import sys
 import traceback
+import re
 
 try:
     from .code_feedback import Feedback, GradingComplete
@@ -172,12 +173,26 @@ def run_code(result, run_req):
 
     # }}}
 
+    # {{{ disable exit
+
+    disable_exit_lines = re.sub("\n    ",
+    "\n", r"""
+    def _monkey_patch_exit():
+        print("Using exit() is not allowed")
+
+    exit = _monkey_patch_exit
+    """)
+
+    # }}}
+
     # {{{ compile code
 
     if getattr(run_req, "setup_code", None):
         try:
             setup_code = compile(
-                    run_req.setup_code, "[setup code]", 'exec')
+                    run_req.setup_code,
+                    "\n".join(["[setup_code]", disable_exit_lines]),
+                    'exec')
         except Exception:
             package_exception(result, "setup_compile_error")
             return
